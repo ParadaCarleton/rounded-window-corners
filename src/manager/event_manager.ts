@@ -139,7 +139,13 @@ function applyEffectTo(actor: RoundedWindowActor) {
         return;
     }
 
-    const texture = actor.get_texture();
+    let targetActor = actor;
+    const metaWindow = actor.metaWindow as any;
+    if (metaWindow.clone) {
+        targetActor = metaWindow.clone;
+    }
+
+    const texture = targetActor.get_texture();
     if (!texture) {
         return;
     }
@@ -150,28 +156,28 @@ function applyEffectTo(actor: RoundedWindowActor) {
     // that? I have no idea. But without that, weird bugs can happen. For
     // example, when using Dash to Dock, all opened windows will be invisible
     // *unless they are pinned in the dock*. So yeah, GNOME is magic.
-    connect(actor, 'notify::size', () => handlers.onSizeChanged(actor));
+    connect(targetActor, 'notify::size', () => handlers.onSizeChanged(targetActor));
     connect(texture, 'size-changed', () => {
-        handlers.onSizeChanged(actor);
+        handlers.onSizeChanged(targetActor);
     });
 
     // Get notified about fullscreen explicitly, since a window must not change in
     // size to go fullscreen
     connect(actor.metaWindow, 'notify::fullscreen', () =>
-        handlers.onSizeChanged(actor),
+        handlers.onSizeChanged(targetActor),
     );
 
     // Window focus changed.
     connect(actor.metaWindow, 'notify::appears-focused', () =>
-        handlers.onFocusChanged(actor),
+        handlers.onFocusChanged(targetActor),
     );
 
     // Workspace or monitor of the window changed.
     connect(actor.metaWindow, 'workspace-changed', () => {
-        handlers.onFocusChanged(actor);
+        handlers.onFocusChanged(targetActor);
     });
 
-    handlers.onAddEffect(actor);
+    handlers.onAddEffect(targetActor);
 }
 
 /**
@@ -180,8 +186,14 @@ function applyEffectTo(actor: RoundedWindowActor) {
  * @param actor - The window actor to remove the effect from.
  */
 function removeEffectFrom(actor: RoundedWindowActor) {
-    disconnectAll(actor);
+    let targetActor = actor;
+    const metaWindow = actor.metaWindow as any;
+    if (metaWindow.clone) {
+        targetActor = metaWindow.clone;
+    }
+
+    disconnectAll(targetActor);
     disconnectAll(actor.metaWindow);
 
-    handlers.onRemoveEffect(actor);
+    handlers.onRemoveEffect(targetActor);
 }
